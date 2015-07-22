@@ -23,7 +23,8 @@ and then run.
 if len(sys.argv) < 3:
     print("usage: orb <command> <file>")
     print("commands:")
-    print("    run - compile the .lpy into a .py and run it")
+    print("    compile - compile the .lpy into a .py")
+    print("    run     - compile the .lpy into a .py and run it")
     sys.exit(1)
 ```
 
@@ -48,13 +49,19 @@ def comp(fname):
                 # toggle between in and out of code
                 in_code = not in_code
                 # We don't want to insert the ``` into the file, just a blank line
-                code.append('###' + line.lstrip()[3:])
+                if line.lstrip()[3:].isspace():
+                    code.append('# ###\n')
+                else:
+                    code.append('# ### ' + line.lstrip()[3:])
                 continue
 
             if in_code:
-                code.append(line)
+                code.append(line.rstrip())
             else:
-                code.append('## ' + line)
+                if line.isspace():
+                    code.append('#\n')
+                else:
+                    code.append('# ' + line)
 
     source = ''.join(code)
     newfile = '.'.join(fname.split('.')[:-1])+'.py'
