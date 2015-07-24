@@ -1,0 +1,4 @@
+# We only want literate source files
+# Except for bootstrap.py
+*.py
+*.pyc
