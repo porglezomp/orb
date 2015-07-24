@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # The Orb Literate Programming System
 
 Orb is intended to produce a runnable python file that looks essentially
@@ -9,10 +10,11 @@ source for Orb is written in Orb itself. You can view both orb.py and orb.lpy,
 and it should be trivial to see the correspondence between the two. This very
 page is produced by processing the source file with Orb.
 
-We import sys since we need to get the file name off the command line. 
+We import sys since we need to get the file name off the command line.
 
 ```python
 import sys
+import subprocess
 ```
 
 When orb is run, the first argument is treated as the main file that should be
@@ -28,45 +30,48 @@ if len(sys.argv) < 3:
     sys.exit(1)
 ```
 
-The basic operation of Orb is very simple, we simply scan through the source
+The basic operation of Orb is very simple, we scan through the source
 file and every time we reach a line that only contains ` ``` ` we toggle
 between code and comments. Lines that are considered code are repeated
 verbatim, and lines that are considered comments are inserted prefixed with
 `## `. The lines that contain the code 'fence' are inserted as blank lines.
 Theoretically this scheme is completely reversible, and the original source
 file can be reconstructed, but this is currently not implemented.
-After each line is processed, the lines are joined back together and should be
-passed on to the python process. We simply change the extension to '.py' so
-that imports just work without any messing around.
+After each line is processed, the lines are joined back together and should
+be passed on to the python process. We simply change the extension to '.py'
+so that imports just work without any messing around.
 
 ```python
 def comp(fname):
+    first_line = True
     in_code = False
     code = []
     with open(fname, 'r') as f:
         for line in f:
+            # Preserve the shebang line
+            if first_line and line[:2] == '#!':
+                code.append(line.rstrip())
+                first_line = False
+                continue
+            
             if line.strip()[:3] == '```':
                 # toggle between in and out of code
                 in_code = not in_code
-                # We don't want to insert the ``` into the file, just a blank line
-                if line.lstrip()[3:].isspace():
-                    code.append('# ###\n')
-                else:
-                    code.append('# ### ' + line.lstrip()[3:])
+                # We don't want to insert the ``` into the file
+                line = '# @@@ ' + line.strip()[3:]
+                code.append(line.rstrip())
                 continue
 
             if in_code:
                 code.append(line.rstrip())
             else:
-                if line.isspace():
-                    code.append('#\n')
-                else:
-                    code.append('# ' + line)
+                line = '# ' + line
+                code.append(line.rstrip())
 
-    source = ''.join(code)
+    source = '\n'.join(code)
     newfile = '.'.join(fname.split('.')[:-1])+'.py'
     with open(newfile, 'w') as f:
-          f.write(source)
+        f.write(source)
 ```
 
 Since line numbers are the same, nothing silly like "sourcemaps" are needed,
@@ -77,10 +82,10 @@ file. Running Orb when the Python file has been modified could offer to merge
 the two.
 
 ```python
-def run(fname):
+def run(fname, *args):
     comp(fname)
     fname = '.'.join(fname.split('.')[:-1])+'.py'
-    print(fname)
+    subprocess.Popen(['python', fname] + list(args)).wait()
 ```
 
 ```python
